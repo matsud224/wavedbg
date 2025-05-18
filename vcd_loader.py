@@ -146,7 +146,6 @@ class VCDLoader:
                     new_scope = VCDScope(tok.scope.ident, tok.scope.type_, current_scope)
                     current_scope.children.append(new_scope)
                     current_scope = new_scope
-                    print(current_scope)
                 case TokenKind.TIMESCALE:
                     pass
                 case TokenKind.UPSCOPE:
@@ -154,7 +153,6 @@ class VCDLoader:
                 case TokenKind.VAR:
                     new_var = VCDVar(tok.var.type_, tok.var.size, tok.var.id_code, tok.var.reference, tok.var.bit_index)
                     current_scope.vars.append(new_var)
-                    print(new_var)
                 case TokenKind.VERSION:
                     metadata['version'] = metadata.get('version', '') + tok.version.rstrip() + '\n'
                 case TokenKind.DUMPALL:
