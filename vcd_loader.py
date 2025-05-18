@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import vcd.common
 from PySide6.QtCore import QAbstractItemModel, Qt, QModelIndex, QAbstractListModel
 from vcd.reader import tokenize, TokenKind
@@ -25,9 +27,10 @@ class VCDVar:
         self.id_code = id_code
         self.reference = reference
         self.bit_index = bit_index
+        self.value_changes = []
 
     def __str__(self):
-        return f'{self.reference} (type={self.var_type}, size={self.size}, id={self.id_code}, bit={self.bit_index})'
+        return f'{self.reference} (type={self.var_type}, size={self.size}, id={self.id_code}, bit={self.bit_index}, value_changes={self.value_changes})'
 
 
 class VCDScopeTreeModel(QAbstractItemModel):
@@ -130,9 +133,11 @@ class VCDLoader:
         f = open(vcd_file, 'rb')
 
         metadata = {}
-        value_changes = []
+        value_changes_dict = defaultdict(list)
+        vars = []
         root_scope = VCDScope('root', vcd.common.ScopeType.module, None)
         current_scope = root_scope
+        current_time = 0
 
         for tok in tokenize(f):
             match tok.kind:
@@ -147,12 +152,13 @@ class VCDLoader:
                     current_scope.children.append(new_scope)
                     current_scope = new_scope
                 case TokenKind.TIMESCALE:
-                    pass
+                    metadata['timescale'] = tok.timescale
                 case TokenKind.UPSCOPE:
                     current_scope = current_scope.parent
                 case TokenKind.VAR:
                     new_var = VCDVar(tok.var.type_, tok.var.size, tok.var.id_code, tok.var.reference, tok.var.bit_index)
                     current_scope.vars.append(new_var)
+                    vars.append(new_var)
                 case TokenKind.VERSION:
                     metadata['version'] = metadata.get('version', '') + tok.version.rstrip() + '\n'
                 case TokenKind.DUMPALL:
@@ -166,14 +172,16 @@ class VCDLoader:
                 case TokenKind.END:
                     pass
                 case TokenKind.CHANGE_TIME:
-                    pass
+                    current_time = tok.time_change
                 case TokenKind.CHANGE_SCALAR:
-                    pass
+                    value_changes_dict[tok.scalar_change.id_code] += (current_time, tok.scalar_change.value)
                 case TokenKind.CHANGE_VECTOR:
-                    pass
+                    value_changes_dict[tok.vector_change.id_code] += (current_time, tok.vector_change.value)
                 case TokenKind.CHANGE_REAL:
-                    pass
+                    value_changes_dict[tok.real_change.id_code] += (current_time, tok.real_change.value)
                 case TokenKind.CHANGE_STRING:
-                    pass
+                    value_changes_dict[tok.string_change.id_code] += (current_time, tok.string_change.value)
 
+        for var in vars:
+            var.value_changes = value_changes_dict[var.id_code]
         return metadata, VCDScopeTreeModel(root_scope)
