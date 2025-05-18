@@ -110,18 +110,18 @@ class VCDVarsListModel(QAbstractListModel):
     def rowCount(self, parent=QModelIndex()):
         return len(self._vars)
 
+    def index(self, row, column, parent=QModelIndex()):
+        if parent.isValid() and parent.column() != 0:
+            return QModelIndex()
+        return self.createIndex(row, column, self._vars[row])
+
     def data(self, index, role=None):
         if not index.isValid() or index.row() >= self.rowCount():
             return None
         if role != Qt.DisplayRole:
             return None
         var = self._vars[index.row()]
-        match index.column():
-            case 0:
-                return var.reference
-            case 1:
-                return var.scope_type.name
-        return None
+        return var.reference
 
 
 class VCDLoader:
