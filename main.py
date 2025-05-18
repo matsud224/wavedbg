@@ -3,10 +3,10 @@ import sys
 from PySide6 import QtWidgets
 from PySide6.QtCore import QRectF, Slot
 from PySide6.QtGui import QAction, Qt
-from PySide6.QtWidgets import QMainWindow, QGraphicsView, QGraphicsScene, QDockWidget, QLabel, QMessageBox, QFileDialog, \
-    QTreeView
+from PySide6.QtWidgets import QMainWindow, QGraphicsView, QGraphicsScene, QDockWidget, QMessageBox, QFileDialog, \
+    QTreeView, QListView
 
-from vcd_loader import VCDLoader
+from vcd_loader import VCDLoader, VCDVarsListModel
 
 
 class MainWindow(QMainWindow):
@@ -34,6 +34,22 @@ class MainWindow(QMainWindow):
             file_name = dialog.selectedFiles()[0]
             metadata, hier_model = VCDLoader.load(file_name)
             self._hierview.setModel(hier_model)
+            self._hierview.selectionModel().currentChanged.connect(self.select_hier)
+
+    @Slot()
+    def select_hier(self, current, previous):
+        if current.isValid():
+            var_model = VCDVarsListModel(current.internalPointer().vars)
+            self._signalview.setModel(var_model)
+            self._signalview.selectionModel().currentChanged.connect(self.select_signal)
+        else:
+            self._signalview.setModel(None)
+
+    @Slot()
+    def select_signal(self, current, previous):
+        if current.isValid():
+            var = current.internalPointer()
+            print(var)
 
     @Slot()
     def about(self):
@@ -58,12 +74,14 @@ class MainWindow(QMainWindow):
         dock = QDockWidget("Hierarchy", self)
         dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas)
         self._hierview = QTreeView()
+        self._hierview.setHeaderHidden(True)
         dock.setWidget(self._hierview)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
         dock = QDockWidget("Signals", self)
         dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas)
-        dock.setWidget(QLabel("Dock 2"))
+        self._signalview = QListView()
+        dock.setWidget(self._signalview)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
 

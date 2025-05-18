@@ -1,5 +1,5 @@
 import vcd.common
-from PySide6.QtCore import QAbstractItemModel, Qt, QModelIndex
+from PySide6.QtCore import QAbstractItemModel, Qt, QModelIndex, QAbstractListModel
 from vcd.reader import tokenize, TokenKind
 
 
@@ -31,7 +31,7 @@ class VCDVar:
 
 
 class VCDScopeTreeModel(QAbstractItemModel):
-    columns = ['Name', 'Type']
+    columns = ['Name']
 
     def __init__(self, root_scope, parent=None):
         super().__init__(parent)
@@ -100,6 +100,28 @@ class VCDScopeTreeModel(QAbstractItemModel):
         if parent_scope == self._root_scope or not parent_scope:
             return QModelIndex()
         return self.createIndex(parent_scope.children.index(child_scope), 0, parent_scope)
+
+
+class VCDVarsListModel(QAbstractListModel):
+    def __init__(self, vars, parent=None):
+        super().__init__(parent)
+        self._vars = vars
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._vars)
+
+    def data(self, index, role=None):
+        if not index.isValid() or index.row() >= self.rowCount():
+            return None
+        if role != Qt.DisplayRole:
+            return None
+        var = self._vars[index.row()]
+        match index.column():
+            case 0:
+                return var.reference
+            case 1:
+                return var.scope_type.name
+        return None
 
 
 class VCDLoader:
